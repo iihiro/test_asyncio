@@ -3,7 +3,7 @@ import asyncio
 '''
 Futureオブジェクトの理解
 
-asyncioで非同期処理を行う際の、"処理"を表す型としては以下の3つがある
+asyncioで非同期処理を行う際の、"処理"を表す型としては以下の3つがある。
 
 * コルーチン
 * Future
@@ -11,10 +11,10 @@ asyncioで非同期処理を行う際の、"処理"を表す型としては以�
 
 この内、TaskはFutureのサブクラスであるため、
 一般的にはより抽象度の高いTaskを使うことが多く、そういった意味では
-コルーチンとTaskとなる
-ただし、コルーチンも結局Taskに変換されて扱われるため、そうするとTaskだけが残る
+コルーチンとTaskの2つとも言える。
+ただし、コルーチンも結局Taskに変換されて扱われるため、そうするとTaskだけが残る。
 ただ、Taskは前述のとおりFutureのサブクラスであるため、まずはFutureを理解することが、
-asyncioで非同期処理を行う際の基本でのデータ型を理解することとなる
+asyncioで非同期処理を行う際の基本のデータ型を理解することにつながる。
 '''
 
 def func(str):
@@ -38,7 +38,7 @@ future = loop.create_future()
 loop.call_soon(func, "hoge") # 処理1(通常関数)
 loop.call_soon(func, "fuga") # 処理2(通常関数)
 
-# Futureオブジェクトに結果をセットする関数をイベントループへ登録
+# 「Futureオブジェクトに結果をセットする」関数をイベントループへ登録
 def set_result(v, f):
     if not f.done():
         f.set_result(v)
@@ -52,9 +52,9 @@ def callback(f):
 future.add_done_callback(lambda f: print("callback"))
 
 # run_until_completeはすでにイベントループへ登録済みの処理に加えて、
-# run_until_completeの引数で渡される処理を追加でイベントループへ登録(おそらく、内部的にはcall_soon()で登録)
-# して、さらに"登録された処理がすべて完了するまで実行する"という動作を行う
-# より正確には、登録された処理がすべて完了したら、loop.stop()をcall_soon()で登録する
+# run_until_completeの引数で渡される処理を追加でイベントループへ登録(内部的にはcall_soon()で登録しているはず)
+# して、さらに"登録された処理がすべて完了するまで実行する"という動作を行う。
+# より正確には、登録された処理がすべて完了したら、loop.stop()をcall_soon()で登録している。
 #
 # run_until_completeの引数でFutureオブジェクトが渡された場合には、
 # イベントループへ登録される処理としては、"「Futureオブジェクトの結果がセットされるまで実行する」という処理"が
@@ -62,6 +62,6 @@ future.add_done_callback(lambda f: print("callback"))
 #
 # 以上のことから、実際に以下のrun_until_completeでは、
 # シーケンシャルに、処理1→2→3と実行され、
-# それと平行して、処理4が実行される
-# 処理4は処理3により、set_resultされると、その結果を返して処理を終える
+# それと平行して、処理4が実行される。
+# 処理4は処理3により、set_resultされると、その結果を返して処理を終える。
 loop.run_until_complete(future) # 処理4(Task)

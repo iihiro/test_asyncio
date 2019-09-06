@@ -14,9 +14,12 @@ def func(str):
     print("hello, %s" % (str))
 
 # イベントループ作成
-# 初回のasyncio.get_event_loop()で、このスレッドに唯一となるイベントループが作成される
-# (実際は、スレッドに対してシングルトンなイベントループスレッドが生成されているはず)
+# 初回のasyncio.get_event_loop()で、このスレッドに唯一となるイベントループを取得する。
+# 実際は、メインスレッドに対してシングルトンなイベントループスレッドが生成されているはず。
+# このスレッドは、asyncioをインポートしたpythonスクリプトが実装された時に、
+# はじめのインポードで生成されているはず。
 # その後、同一スレッド内でasyncio.get_event_loop()を何度読んでも作成済みの同じイベントループが返される
+# loop.close()でこのスレッドは破棄され、asyncio.new_event_loop()で作成できる
 loop = asyncio.get_event_loop()
 
 # call_soon()ですぐに実行する処理をイベントループへ登録できる
@@ -35,7 +38,7 @@ loop.call_later(2, func, "fuga")
 #   sleep(1sec)
 #   time -= 1
 #   if time > 0:
-#     call_cater(time, f, args)
+#     call_later(time, f, args)
 #   else:
 #     f()
 #
@@ -48,14 +51,32 @@ h2 = loop.call_soon(func, "hoge2")
 print(h2) # -> <Handle func('hoge2') at 1.py:3>
 h2.cancel()
 
-# 登録されている処理を実行する
-# ただし、登録されている処理が"通常の関数"である場合は、
-# call_soon()ですぐに実行するように登録された処理を順番に実行し、
-# その上で、call_later()でN秒後に実行するように登録された処理を
-# しかるべきタイミングで実行する
-# つまり、上記の例では2秒後に実行されるcall_later(2, ..)よりも前に
-# call_soon(loop.stop)が実行されるため、call_later(2, ..)側は実行されずにプログラムが終了する
-# 順番ではなく、"一斉"に処理を実行したい場合は、通常の関数ではなく、タスクを登録する必要がある
+# run_forever()で登録した処理を永遠に実行できる。
+# 永遠とは、一通り実行し終わると、また始めから実行する、を繰り返すということ
+# はじめに登録した処理を実行し、それが終わったら次に登録した処理、…となる。
+# 登録した順番ではなく、"一斉"に処理を実行したい場合は、通常の関数ではなく、タスクを登録する必要がある
+# 
+# 今回は関数を登録しているため、上記の例では、
+#   1. loop.call_soon(func, "hoge")
+#   2. loop.call_later(2, func, "fuga")
+#   3. loop.call_soon(loop.stop)
+# の順となる。
+# ただし、loop.call_later()については、内部で再帰呼出が
+# 発生するため、実際は以下のようになる。
+# 
+#   1. loop.call_soon(func, "hoge")
+#   2. loop.call_later(2, func, "fuga")
+#      -> sleep(1)
+#      -> loop.call_later(1, func, "fuga")を新規登録(-> 4.)
+#   3. loop.call_soon(loop.stop)
+#   4. loop.call_later(1, func, "fuga")
+#      -> sleep(1)
+#      -> loop.call_soon(func, "fuga")を新規登録(-> 5.)
+#   5. loop.call_soon(func, "fuga")
+# 
+# つまり、この例だと3.でループが止まってしまうため、
+# 結果的にloop.call_later(2, func, "fuga")は実行されない。
+#
 loop.run_forever()
 
 # イベントループを閉じる
